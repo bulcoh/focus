@@ -9,8 +9,8 @@
 html{background:var(--idle);transition:background .6s;scroll-padding-top:env(safe-area-inset-top,0px)}
 html[data-s=focus]{background:var(--focus)}
 html[data-s=break]{background:var(--break)}
-body{margin:0;min-height:100vh;background:transparent;color:var(--fg);font-family:-apple-system,"Helvetica Neue","Apple SD Gothic Neo","Malgun Gothic",sans-serif}
-main{min-height:100vh;box-sizing:border-box;padding:max(40px,14vh) 16px 40px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:24px;user-select:none}
+body{margin:0;min-height:100vh;display:flex;flex-direction:column;background:transparent;color:var(--fg);font-family:-apple-system,"Helvetica Neue","Apple SD Gothic Neo","Malgun Gothic",sans-serif}
+main{flex:1;box-sizing:border-box;padding:max(40px,14vh) 16px 40px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:24px;user-select:none}
 #mode{font-size:13px;letter-spacing:.2em;color:var(--dim)}
 #time{font-size:min(22vw,120px);font-weight:200;font-variant-numeric:tabular-nums;cursor:pointer;line-height:1}
 .row{display:flex;gap:18px;font-size:13px;color:var(--dim);flex-wrap:wrap;justify-content:center}
@@ -26,8 +26,14 @@ input[type=range]{width:120px;accent-color:#fff;opacity:.6}
 .d{flex:0 0 10px;width:10px;height:10px;box-sizing:border-box;border-radius:50%;background:var(--fg);display:block}
 .d.o{background:transparent;border:1.5px solid var(--fg)}
 #log .tot{justify-content:center;font-size:12px;margin-top:6px;cursor:pointer}
-.tot .t2{display:none}
+.tot span{padding:4px 12px;border-radius:999px}
+.tot .t2{display:none;background:rgba(255,255,255,.18);color:var(--fg)}
+.tot .cf{background:#b8453a;color:#fff}
 @media (hover:hover){.tot:hover .t1{display:none}.tot:hover .t2{display:inline}}
+footer{border-top:1px solid rgba(255,255,255,.12);padding:14px 16px;display:flex;gap:22px;justify-content:center;font-size:12px}
+footer a{color:var(--dim);text-decoration:none}
+footer a:hover,footer a.cur{color:var(--fg)}
+footer sup{font-size:9px}
 iframe{position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;border:0;left:0;top:0}
 </style>
 </head>
@@ -37,10 +43,10 @@ iframe{position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;border:
   <div id="time" title="클릭: 시작/일시정지">25:00</div>
   <input type="text" id="task" placeholder="집중" maxlength="20">
   <div class="row"><button id="skip">skip</button><button data-len="25">25 / 5</button><button data-len="50">50 / 10</button></div>
-  <div class="row"><button id="cosmos">cosmos</button></div>
   <input type="range" id="vol" min="0" max="100" value="100">
   <div id="log"></div>
 </main>
+<footer><a class="cur" href="./">타이머</a><a href="report.html">월간 리포트 <sup>beta</sup></a></footer>
 <div id="yt"></div>
 <script>
 const TEST=true; /* 테스트: 집중/휴식 25초. 배포 전 false로 */
@@ -54,10 +60,11 @@ const fmtM=m=>m>=60?Math.floor(m/60)+'시간 '+(m%60)+'분':m+'분';
 const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 /* ---- 기록: 하나로 계속 쌓고, 리셋하면 보관함으로 ---- */
-const LK='focus-log2',AK='focus-archive';
+const LK='focus-log2',SK='focus-sessions';
 function getLog(){try{return JSON.parse(localStorage.getItem(LK)||'{}')}catch(e){return{}}}
 function setLog(L){try{localStorage.setItem(LK,JSON.stringify(L))}catch(e){}}
-function addLog(name,min){const L=getLog(),r=L[name]||{n:0,m:0};r.n++;r.m+=min;L[name]=r;setLog(L)}
+function addLog(name,min){const L=getLog(),r=L[name]||{n:0,m:0};r.n++;r.m+=min;L[name]=r;setLog(L);
+  try{const A=JSON.parse(localStorage.getItem(SK)||'[]');A.push({t:Date.now(),k:name,m:min});localStorage.setItem(SK,JSON.stringify(A))}catch(e){}}
 let confirmReset=false,confirmTimer=null;
 function renderLog(){
   const L=getLog(),name=$('#task').value.trim()||'집중';
@@ -65,12 +72,11 @@ function renderLog(){
   if(lastIp){const r=rows.find(x=>x.k===name);r?r.p=true:rows.push({k:name,n:0,m:0,p:true})}
   let t=0;
   $('#log').innerHTML=rows.map(r=>{t+=r.m;return `<div><span class="nm">${esc(r.k)}</span><span class="ds" title="${r.m}분">${'<i class="d"></i>'.repeat(r.n)}${r.p?'<i class="d o"></i>':''}</span></div>`}).join('')
-   +(t?`<div class="tot" id="tot">${confirmReset?'<span>한 번 더 누르면 리셋</span>':`<span class="t1">${fmtM(t)}</span><span class="t2">기록 리셋</span>`}</div>`:'');
+   +(t?`<div class="tot" id="tot">${confirmReset?'<span class="cf">한 번 더 누르면 리셋</span>':`<span class="t1">${fmtM(t)}</span><span class="t2">기록 리셋</span>`}</div>`:'');
 }
 $('#log').addEventListener('click',e=>{
   if(!e.target.closest('#tot'))return;
   if(!confirmReset){confirmReset=true;renderLog();clearTimeout(confirmTimer);confirmTimer=setTimeout(()=>{confirmReset=false;renderLog()},3000);return}
-  try{const A=JSON.parse(localStorage.getItem(AK)||'[]');A.push({at:Date.now(),log:getLog()});localStorage.setItem(AK,JSON.stringify(A))}catch(e){}
   setLog({});confirmReset=false;clearTimeout(confirmTimer);renderLog();
 });
 
@@ -110,27 +116,27 @@ function start(){
   if(!ctx){try{ctx=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}
   ctx&&ctx.resume&&ctx.resume();
   try{if('Notification' in window&&Notification.permission==='default')Notification.requestPermission()}catch(e){}
-  clearInterval(timer);end=Date.now()+left*1000;timer=setInterval(tick,250);paint();
+  startSound();clearInterval(timer);end=Date.now()+left*1000;timer=setInterval(tick,250);paint();
 }
 function stop(){clearInterval(timer);timer=null;paint()}
-$('#time').onclick=()=>{clearInterval(flash);flash=null;timer?stop():start()};
+$('#time').onclick=()=>{clearInterval(flash);flash=null;timer?(stop(),stopSound()):start()};
 $('#skip').onclick=()=>{const was=!!timer;stop();mode=mode==='focus'?'break':'focus';left=dur(mode);paint();if(was)start()};
-document.querySelectorAll('[data-len]').forEach(b=>b.onclick=()=>{pref.len=+b.dataset.len;savePref();stop();left=dur(mode);paint()});
+document.querySelectorAll('[data-len]').forEach(b=>b.onclick=()=>{pref.len=+b.dataset.len;savePref();stop();stopSound();left=dur(mode);paint()});
 document.addEventListener('keydown',e=>{if(e.code==='Space'&&e.target.tagName!=='INPUT'){e.preventDefault();$('#time').click()}});
 $('#task').addEventListener('input',renderLog);
 
-/* ---- COSMOS ---- */
-let on=false,ytTouched=false;
+/* ---- COSMOS: 타이머가 돌아가는 동안 자동 재생 ---- */
+let ytTouched=false;
 function setYtVol(){const f=document.querySelector('iframe');if(f)f.contentWindow.postMessage(JSON.stringify({event:'command',func:'setVolume',args:[+$('#vol').value]}),'*')}
-$('#cosmos').onclick=()=>{
-  on=!on;$('#cosmos').classList.toggle('on',on);$('#yt').innerHTML='';
-  if(!on)return;
+function startSound(){
+  if($('#yt').firstChild)return;
   const f=document.createElement('iframe');f.allow='autoplay;encrypted-media';
   f.src='https://www.youtube.com/embed/xRuHxlUoy2s?autoplay=1&enablejsapi=1&playsinline=1';
   if(ytTouched)f.onload=()=>setTimeout(setYtVol,1500);
   $('#yt').appendChild(f);
-};
-$('#vol').oninput=()=>{ytTouched=true;if(on)setYtVol()};
+}
+function stopSound(){$('#yt').innerHTML=''}
+$('#vol').oninput=()=>{ytTouched=true;setYtVol()};
 
 paint();renderLog();
 </script>
