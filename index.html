@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>25:00</title>
+<style>
+:root{--bg:#f6f5f2;--fg:#222;--dim:#aaa;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121212;--fg:#e8e8e8;--dim:#666}}
+:root[data-theme="dark"]{--bg:#121212;--fg:#e8e8e8;--dim:#666}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font-family:-apple-system,"Helvetica Neue","Apple SD Gothic Neo","Malgun Gothic",sans-serif}
+main{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;user-select:none}
+#mode{font-size:13px;letter-spacing:.2em;color:var(--dim)}
+#time{font-size:min(22vw,120px);font-weight:200;font-variant-numeric:tabular-nums;cursor:pointer;line-height:1}
+.row{display:flex;gap:22px;font-size:13px;color:var(--dim)}
+button{all:unset;cursor:pointer;color:var(--dim);transition:color .2s}
+button:hover,button.on{color:var(--fg)}
+input[type=range]{width:120px;accent-color:var(--fg);opacity:.5}
+iframe{position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;border:0;left:0;top:0}
+#note{font-size:11px;color:var(--dim);height:12px}
+</style>
+</head>
+<body>
+<main>
+  <div id="mode">FOCUS</div>
+  <div id="time" title="클릭: 시작/일시정지">25:00</div>
+  <div class="row"><button id="reset">reset</button><button id="skip">skip</button></div>
+  <div class="row" id="sounds">
+    <button data-id="xRuHxlUoy2s">deep space</button>
+    <button data-id="jXAEIWcGXwE">piano</button>
+    <button data-id="rFZHOHl-L8A">lo-fi</button>
+  </div>
+  <input type="range" id="vol" min="0" max="100" value="60">
+  <div id="note"></div>
+</main>
+<div id="yt"></div>
+<script>
+const D={focus:25*60,short:5*60,long:15*60};
+let mode='focus',left=D.focus,timer=null,count=0,end=0;
+const $=s=>document.querySelector(s);
+const fmt=s=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+function render(){const t=fmt(left);$('#time').textContent=t;document.title=t;$('#mode').textContent=mode==='focus'?'FOCUS':'BREAK'}
+function beep(){try{const c=new (window.AudioContext||window.webkitAudioContext)();[0,.25,.5].forEach(d=>{const o=c.createOscillator(),g=c.createGain();o.frequency.value=660;g.gain.value=.08;o.connect(g);g.connect(c.destination);o.start(c.currentTime+d);o.stop(c.currentTime+d+.15)})}catch(e){}}
+function next(){beep();if(mode==='focus'){count++;mode=count%4===0?'long':'short'}else mode='focus';left=D[mode];render()}
+function tick(){left=Math.max(0,Math.round((end-Date.now())/1000));render();if(left<=0){stop();next()}}
+function start(){end=Date.now()+left*1000;timer=setInterval(tick,250)}
+function stop(){clearInterval(timer);timer=null}
+$('#time').onclick=()=>timer?stop():start();
+$('#reset').onclick=()=>{stop();left=D[mode];render()};
+$('#skip').onclick=()=>{stop();mode=mode==='focus'?'short':'focus';left=D[mode];render()};
+document.addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();$('#time').click()}});
+
+let cur=null;
+function setVol(){const f=document.querySelector('iframe');if(f)f.contentWindow.postMessage(JSON.stringify({event:'command',func:'setVolume',args:[+$('#vol').value]}),'*')}
+document.querySelectorAll('#sounds button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#sounds button').forEach(x=>x.classList.remove('on'));
+  $('#yt').innerHTML='';
+  if(cur===b.dataset.id){cur=null;$('#note').textContent='';return}
+  cur=b.dataset.id;b.classList.add('on');
+  const f=document.createElement('iframe');
+  f.allow='autoplay;encrypted-media';
+  f.src='https://www.youtube.com/embed/'+cur+'?autoplay=1&enablejsapi=1&playsinline=1';
+  f.onload=()=>setTimeout(setVol,1500);
+  $('#yt').appendChild(f);
+  $('#note').textContent='재생이 안 되면 영상 제작자가 임베드를 막은 거예요';
+});
+$('#vol').oninput=setVol;
+render();
+</script>
+</body>
+</html>
