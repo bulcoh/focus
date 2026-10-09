@@ -9,15 +9,15 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="theme-color" content="#2a2a2a">
 <meta property="og:title" content="Focus">
-<meta property="og:image" content="og-image.png">
+<meta property="og:image" content="https://bulcoh.github.io/focus/og-image.png">
 <style>
 :root{--idle:#2a2a2a;--focus:#16305c;--break:#6f6f6f;--fg:#f2f2f2;--dim:rgba(255,255,255,.5);box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 html{background:var(--idle);transition:background .6s;scroll-padding-top:env(safe-area-inset-top,0px)}
 html[data-s=focus]{background:var(--focus)}
 html[data-s=break]{background:var(--break)}
-html{--ov:rgba(24,24,24,.55)}
-html[data-s=focus]{--ov:rgba(12,34,80,.15)}
-html[data-s=break]{--ov:rgba(95,95,95,.5)}
+html{--ov:rgba(1,1,1,.5)}
+html[data-s=focus]{--ov:rgba(12,12,12,.15)}
+html[data-s=break]{--ov:rgba(51,51,51,.5)}
 body::before{content:'';position:fixed;inset:0;z-index:-1;background:url(space.webp) center/cover no-repeat}
 body::after{content:'';position:fixed;inset:0;z-index:-1;background:var(--ov);transition:background .6s}
 body{margin:0;min-height:100vh;display:flex;flex-direction:column;background:transparent;color:var(--fg);font-family:-apple-system,"Helvetica Neue","Apple SD Gothic Neo","Malgun Gothic",sans-serif}
@@ -90,7 +90,7 @@ $('#log').addEventListener('click',e=>{
 let mode='focus',left=dur('focus'),timer=null,end=0,ctx=null,flash=null,lastIp=false;
 function paint(){
   const t=fmt(left);$('#time').textContent=t;if(!flash)document.title=t;
-  $('#mode').textContent=mode==='focus'?'FOCUS':'BREAK';
+$('#mode').textContent=mode==='break'?'BREAK':(!timer&&left===dur('focus')?'CALM DOWN':'FOCUS');
   root.dataset.s=timer?mode:'idle';
   const ip=mode==='focus'&&(!!timer||left<dur('focus'));if(ip!==lastIp){lastIp=ip;renderLog()}
   document.querySelectorAll('[data-len]').forEach(b=>b.classList.toggle('on',+b.dataset.len===pref.len));
