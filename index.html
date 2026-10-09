@@ -16,17 +16,18 @@ main{min-height:100vh;box-sizing:border-box;padding:max(40px,14vh) 16px 40px;dis
 .row{display:flex;gap:18px;font-size:13px;color:var(--dim);flex-wrap:wrap;justify-content:center}
 button{all:unset;cursor:pointer;color:var(--dim);transition:color .2s}
 button:hover,button.on{color:var(--fg)}
-input[type=text]{background:transparent;border:0;border-bottom:1px solid var(--dim);color:var(--fg);text-align:center;font:inherit;font-size:15px;padding:4px;width:180px;outline:0;user-select:text}
+input[type=text]{background:transparent;border:0;border-bottom:1px solid var(--dim);color:var(--fg);text-align:center;font:inherit;font-size:15px;padding:4px;width:180px;outline:0;user-select:text;border-radius:0}
 input::placeholder{color:var(--dim)}
 input[type=range]{width:120px;accent-color:#fff;opacity:.6}
-#note{font-size:11px;color:var(--dim);height:12px}
 #log{width:min(300px,86vw);font-size:13px;color:var(--dim)}
-#log div{display:flex;gap:14px;align-items:center;padding:4px 0}
+#log>div{display:flex;gap:14px;align-items:center;padding:4px 0}
 #log .nm{min-width:56px;text-align:right}
 #log .ds{display:flex;gap:7px;flex-wrap:wrap}
-.d{width:10px;height:10px;border-radius:50%;background:var(--fg);display:inline-block}
-.d.o{background:transparent;box-shadow:inset 0 0 0 1.5px var(--fg)}
-#log .tot{justify-content:center;font-size:12px;margin-top:6px}
+.d{flex:0 0 10px;width:10px;height:10px;box-sizing:border-box;border-radius:50%;background:var(--fg);display:block}
+.d.o{background:transparent;border:1.5px solid var(--fg)}
+#log .tot{justify-content:center;font-size:12px;margin-top:6px;cursor:pointer}
+.tot .t2{display:none}
+@media (hover:hover){.tot:hover .t1{display:none}.tot:hover .t2{display:inline}}
 iframe{position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;border:0;left:0;top:0}
 </style>
 </head>
@@ -34,38 +35,46 @@ iframe{position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;border:
 <main>
   <div id="mode">FOCUS</div>
   <div id="time" title="클릭: 시작/일시정지">25:00</div>
-  <div class="row"><button id="reset">reset</button><button id="skip">skip</button></div>
-  <div class="row"><button data-len="25">25 / 5</button><button data-len="50">50 / 10</button></div>
   <input type="text" id="task" placeholder="집중" maxlength="20">
-  <div class="row" id="sounds"></div>
+  <div class="row"><button id="skip">skip</button><button data-len="25">25 / 5</button><button data-len="50">50 / 10</button></div>
+  <div class="row"><button id="cosmos">cosmos</button></div>
   <input type="range" id="vol" min="0" max="100" value="100">
-  <div id="note"></div>
   <div id="log"></div>
 </main>
 <div id="yt"></div>
 <script>
+const TEST=true; /* 테스트: 집중/휴식 25초. 배포 전 false로 */
 const $=s=>document.querySelector(s),root=document.documentElement;
 let pref={len:25};
 try{Object.assign(pref,JSON.parse(localStorage.getItem('focus-pref')||'{}'))}catch(e){}
 const savePref=()=>{try{localStorage.setItem('focus-pref',JSON.stringify(pref))}catch(e){}};
-const dur=m=>m==='focus'?pref.len*60:(pref.len===50?10:5)*60;
+const dur=m=>TEST?25:(m==='focus'?pref.len*60:(pref.len===50?10:5)*60);
 const fmt=s=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
 const fmtM=m=>m>=60?Math.floor(m/60)+'시간 '+(m%60)+'분':m+'분';
 const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
-/* ---- 기록 ---- */
-const today=()=>new Date().toLocaleDateString('sv');
-function getLog(){try{return JSON.parse(localStorage.getItem('focus-log')||'{}')}catch(e){return{}}}
-function addLog(name,min){const L=getLog(),d=today();L[d]=L[d]||{};const r=L[d][name]||{n:0,m:0};r.n++;r.m+=min;L[d][name]=r;try{localStorage.setItem('focus-log',JSON.stringify(L))}catch(e){}}
+/* ---- 기록: 하나로 계속 쌓고, 리셋하면 보관함으로 ---- */
+const LK='focus-log2',AK='focus-archive';
+function getLog(){try{return JSON.parse(localStorage.getItem(LK)||'{}')}catch(e){return{}}}
+function setLog(L){try{localStorage.setItem(LK,JSON.stringify(L))}catch(e){}}
+function addLog(name,min){const L=getLog(),r=L[name]||{n:0,m:0};r.n++;r.m+=min;L[name]=r;setLog(L)}
+let confirmReset=false,confirmTimer=null;
 function renderLog(){
-  const L=getLog()[today()]||{},name=$('#task').value.trim()||'집중';
+  const L=getLog(),name=$('#task').value.trim()||'집중';
   const rows=Object.entries(L).map(([k,v])=>({k,n:v.n,m:v.m,p:false}));
   if(lastIp){const r=rows.find(x=>x.k===name);r?r.p=true:rows.push({k:name,n:0,m:0,p:true})}
   let t=0;
-  $('#log').innerHTML=rows.map(r=>{t+=r.m;return `<div><span class="nm">${esc(r.k)}</span><span class="ds" title="${r.m}분">${'<i class="d"></i>'.repeat(r.n)}${r.p?'<i class="d o"></i>':''}</span></div>`}).join('')+(t?`<div class="tot">${fmtM(t)}</div>`:'');
+  $('#log').innerHTML=rows.map(r=>{t+=r.m;return `<div><span class="nm">${esc(r.k)}</span><span class="ds" title="${r.m}분">${'<i class="d"></i>'.repeat(r.n)}${r.p?'<i class="d o"></i>':''}</span></div>`}).join('')
+   +(t?`<div class="tot" id="tot">${confirmReset?'<span>한 번 더 누르면 리셋</span>':`<span class="t1">${fmtM(t)}</span><span class="t2">기록 리셋</span>`}</div>`:'');
 }
+$('#log').addEventListener('click',e=>{
+  if(!e.target.closest('#tot'))return;
+  if(!confirmReset){confirmReset=true;renderLog();clearTimeout(confirmTimer);confirmTimer=setTimeout(()=>{confirmReset=false;renderLog()},3000);return}
+  try{const A=JSON.parse(localStorage.getItem(AK)||'[]');A.push({at:Date.now(),log:getLog()});localStorage.setItem(AK,JSON.stringify(A))}catch(e){}
+  setLog({});confirmReset=false;clearTimeout(confirmTimer);renderLog();
+});
 
-/* ---- 타이머 ---- */
+/* ---- 타이머: 누르기 전까지 집중-휴식 계속 반복 ---- */
 let mode='focus',left=dur('focus'),timer=null,end=0,ctx=null,flash=null,lastIp=false;
 function paint(){
   const t=fmt(left);$('#time').textContent=t;if(!flash)document.title=t;
@@ -91,66 +100,38 @@ function finish(){
   const wasFocus=mode==='focus';
   if(wasFocus){addLog($('#task').value.trim()||'집중',pref.len);renderLog()}
   bell();
-  const msg=wasFocus?'⏰ 휴식!':'⏰ 집중!';flashTitle(msg);
+  const msg=wasFocus?'⏰ 휴식!':'⏰ 집중!';
   try{if('Notification' in window&&Notification.permission==='granted'&&document.hidden)new Notification(msg)}catch(e){}
-  mode=wasFocus?'break':'focus';left=dur(mode);paint();
+  mode=wasFocus?'break':'focus';left=dur(mode);
+  start();flashTitle(msg);
 }
 function tick(){left=Math.max(0,Math.round((end-Date.now())/1000));paint();if(left<=0)finish()}
 function start(){
   if(!ctx){try{ctx=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}
   ctx&&ctx.resume&&ctx.resume();
   try{if('Notification' in window&&Notification.permission==='default')Notification.requestPermission()}catch(e){}
-  clearInterval(flash);flash=null;
-  end=Date.now()+left*1000;timer=setInterval(tick,250);paint();
+  clearInterval(timer);end=Date.now()+left*1000;timer=setInterval(tick,250);paint();
 }
 function stop(){clearInterval(timer);timer=null;paint()}
-$('#time').onclick=()=>timer?stop():start();
-$('#reset').onclick=()=>{stop();left=dur(mode);paint()};
-$('#skip').onclick=()=>{stop();mode=mode==='focus'?'break':'focus';left=dur(mode);paint()};
+$('#time').onclick=()=>{clearInterval(flash);flash=null;timer?stop():start()};
+$('#skip').onclick=()=>{const was=!!timer;stop();mode=mode==='focus'?'break':'focus';left=dur(mode);paint();if(was)start()};
 document.querySelectorAll('[data-len]').forEach(b=>b.onclick=()=>{pref.len=+b.dataset.len;savePref();stop();left=dur(mode);paint()});
 document.addEventListener('keydown',e=>{if(e.code==='Space'&&e.target.tagName!=='INPUT'){e.preventDefault();$('#time').click()}});
-
-/* ---- 사운드 ---- */
-const S=[
-  {t:'deep space',yt:'xRuHxlUoy2s'},
-  {t:'groove salad',soma:'groovesalad'},
-  {t:'drone zone',soma:'dronezone'},
-  {t:'def con',soma:'defcon'},
-  {t:'mission control',soma:'missioncontrol'}
-];
-const aud=new Audio();aud.preload='none';
-let cur=null,cands=[],ci=0,ytTouched=false;
-const note=t=>$('#note').textContent=t;
-const cand=c=>[6,2,5,1,3,4].map(n=>`https://ice${n}.somafm.com/${c}-128-aac`).concat([1,2].map(n=>`https://ice${n}.somafm.com/${c}-128-mp3`),[`https://ice.somafm.com/${c}`]);
-aud.addEventListener('error',()=>{
-  if(!cur)return;ci++;
-  if(ci<cands.length){aud.src=cands[ci];aud.play().catch(()=>{})}else note('스트림 연결 실패');
-});
-aud.addEventListener('playing',()=>note(''));
-function stopSound(){
-  cur=null;aud.pause();aud.removeAttribute('src');aud.load();$('#yt').innerHTML='';note('');
-  document.querySelectorAll('#sounds button').forEach(x=>x.classList.remove('on'));
-}
-S.forEach(s=>{
-  const b=document.createElement('button');b.textContent=s.t;$('#sounds').appendChild(b);
-  b.onclick=()=>{
-    const same=cur===s;stopSound();if(same)return;
-    cur=s;b.classList.add('on');
-    if(s.yt){
-      const f=document.createElement('iframe');f.allow='autoplay;encrypted-media';
-      f.src='https://www.youtube.com/embed/'+s.yt+'?autoplay=1&enablejsapi=1&playsinline=1';
-      if(ytTouched)f.onload=()=>setTimeout(setYtVol,1500);
-      $('#yt').appendChild(f);
-    }else{
-      cands=cand(s.soma);ci=0;aud.volume=$('#vol').value/100;aud.src=cands[0];note('연결 중…');
-      aud.play().catch(()=>{});
-    }
-  };
-});
-function setYtVol(){const f=document.querySelector('iframe');if(f)f.contentWindow.postMessage(JSON.stringify({event:'command',func:'setVolume',args:[+$('#vol').value]}),'*')}
-$('#vol').oninput=()=>{aud.volume=$('#vol').value/100;ytTouched=true;if(cur&&cur.yt)setYtVol()};
-
 $('#task').addEventListener('input',renderLog);
+
+/* ---- COSMOS ---- */
+let on=false,ytTouched=false;
+function setYtVol(){const f=document.querySelector('iframe');if(f)f.contentWindow.postMessage(JSON.stringify({event:'command',func:'setVolume',args:[+$('#vol').value]}),'*')}
+$('#cosmos').onclick=()=>{
+  on=!on;$('#cosmos').classList.toggle('on',on);$('#yt').innerHTML='';
+  if(!on)return;
+  const f=document.createElement('iframe');f.allow='autoplay;encrypted-media';
+  f.src='https://www.youtube.com/embed/xRuHxlUoy2s?autoplay=1&enablejsapi=1&playsinline=1';
+  if(ytTouched)f.onload=()=>setTimeout(setYtVol,1500);
+  $('#yt').appendChild(f);
+};
+$('#vol').oninput=()=>{ytTouched=true;if(on)setYtVol()};
+
 paint();renderLog();
 </script>
 </body>
