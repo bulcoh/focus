@@ -4,11 +4,22 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>25:00</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#2a2a2a">
+<meta property="og:title" content="Focus">
+<meta property="og:image" content="og-image.png">
 <style>
 :root{--idle:#2a2a2a;--focus:#16305c;--break:#6f6f6f;--fg:#f2f2f2;--dim:rgba(255,255,255,.5);box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 html{background:var(--idle);transition:background .6s;scroll-padding-top:env(safe-area-inset-top,0px)}
 html[data-s=focus]{background:var(--focus)}
 html[data-s=break]{background:var(--break)}
+html{--ov:rgba(24,24,24,.55)}
+html[data-s=focus]{--ov:rgba(12,34,80,.55)}
+html[data-s=break]{--ov:rgba(95,95,95,.5)}
+body::before{content:'';position:fixed;inset:0;z-index:-1;background:url(space.webp) center/cover no-repeat}
+body::after{content:'';position:fixed;inset:0;z-index:-1;background:var(--ov);transition:background .6s}
 body{margin:0;min-height:100vh;display:flex;flex-direction:column;background:transparent;color:var(--fg);font-family:-apple-system,"Helvetica Neue","Apple SD Gothic Neo","Malgun Gothic",sans-serif}
 main{flex:1;box-sizing:border-box;padding:max(40px,14vh) 16px 40px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:24px;user-select:none}
 #mode{font-size:13px;letter-spacing:.2em;color:var(--dim)}
