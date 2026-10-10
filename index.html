@@ -98,7 +98,7 @@ $('#log').addEventListener('click',e=>{
 let mode='focus',left=dur('focus'),timer=null,end=0,ctx=null,flash=null,lastIp=false;
 function paint(){
   const t=fmt(left);$('#time').textContent=t;if(!flash)document.title=t;
-$('#mode').textContent=mode==='break'?'BREAK':(!timer&&left===dur('focus')?'CALM DOWN':'FOCUS');
+$('#mode').textContent=mode==='break'?'BREAK':(!timer?'STAY CALM':'FOCUS');
   root.dataset.s=timer?mode:'idle';
   const ip=mode==='focus'&&(!!timer||left<dur('focus'));if(ip!==lastIp){lastIp=ip;renderLog()}
   document.querySelectorAll('[data-len]').forEach(b=>b.classList.toggle('on',+b.dataset.len===pref.len));
