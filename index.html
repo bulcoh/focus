@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>25:00</title>
+<script>if(/Windows/i.test(navigator.userAgent))document.documentElement.classList.add('win')</script>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -29,7 +30,14 @@ button{all:unset;cursor:pointer;color:var(--dim);transition:color .2s}
 button:hover,button.on{color:var(--fg)}
 input[type=text]{background:transparent;border:0;border-bottom:1px solid var(--dim);color:var(--fg);text-align:center;font:inherit;font-size:15px;padding:4px;width:180px;outline:0;user-select:text;border-radius:0}
 input::placeholder{color:var(--dim)}
-input[type=range]{width:120px;accent-color:#fff;opacity:.6}
+html:not(.win) input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;width:120px;height:14px;outline:0;margin:0;opacity:.55}
+html:not(.win) input[type=range]::-webkit-slider-runnable-track{box-sizing:border-box;height:7px;border:1px solid #a3a3a3;border-radius:3px;background:linear-gradient(to right,#fff var(--v,100%),rgba(255,255,255,.3) var(--v,100%));transition:border-color .2s}
+html:not(.win) input[type=range]:hover::-webkit-slider-runnable-track{border-color:#cfcfcf}
+html:not(.win) input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#fff;margin-top:-4px}
+html:not(.win) input[type=range]::-moz-range-track{box-sizing:border-box;height:7px;border:1px solid #fff;border-radius:3px;background:linear-gradient(to right,#fff var(--v,100%),transparent var(--v,100%))}
+html:not(.win) input[type=range]::-moz-range-thumb{width:12px;height:12px;border:0;border-radius:50%;background:#fff}
+html.win input[type=range]{width:120px;accent-color:#fff;opacity:.6}
+
 #log{width:min(300px,86vw);font-size:13px;color:var(--dim)}
 #log>div{display:flex;gap:14px;align-items:center;padding:4px 0}
 #log .nm{min-width:56px;text-align:right}
@@ -142,7 +150,8 @@ function startSound(){
   $('#yt').appendChild(f);
 }
 function stopSound(){$('#yt').innerHTML=''}
-$('#vol').oninput=()=>{ytTouched=true;setYtVol()};
+const paintVol=()=>$('#vol').style.setProperty('--v',$('#vol').value+'%');
+$('#vol').oninput=()=>{ytTouched=true;setYtVol();paintVol()};paintVol();
 
 paint();renderLog();
 </script>
