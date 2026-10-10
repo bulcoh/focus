@@ -63,7 +63,7 @@ iframe{position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;border:
 </main>
 <div id="yt"></div>
 <script>
-const TEST=true; /* 테스트: 집중/휴식 25초. 배포 전 false로 */
+const TEST=false; /* 테스트: 집중/휴식 25초. 배포 전 false로 */
 const $=s=>document.querySelector(s),root=document.documentElement;
 let pref={len:25};
 try{Object.assign(pref,JSON.parse(localStorage.getItem('focus-pref')||'{}'))}catch(e){}
